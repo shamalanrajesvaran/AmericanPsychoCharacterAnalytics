@@ -1,0 +1,198 @@
+---
+title: "American Psycho"
+author: "Shamalan Rajesvaran (18042945) & Ng Wei Xiang (18033167) "
+date: "10/11/2020"
+output: html_document
+---
+install.packages("rmarkdown")
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#DATASET DISCRIPTION
+
+#We have chosen to analyze the movie American Psycho released in the year 2000. American Psycho is a classic psychological horror film starring Christian Bale as Patrick Bateman. 
+
+#Our treatment of the dataset involved several stages. They were the arranging, exploration and the interpretation of the data.
+
+#When it came to the arranging of the data set, we first scrutinized the “American Psycho” JSON file that we downloaded. We then converted the file to a csv file in order to make it much easier for us to read the dataset. Once in its csv format, we decided that we would utilize the variables “edges_source”, “edges_target” and “edges_weight”. The remaining variables were discarded.
+
+#We then decided to adjust the arrangement of the dataset by arranging it into a matrix in which every node that is present in the network has a row and column. The intersection between a specific node’s row and column would indicate the weight of the edges. This adjacency matrix would make it easier for us to read and interpret the data.
+
+#The three data variables we are left with are:
+#edges_sources -> character variable indicating from the source node
+#edges_target -> character variable indicating the node which is the target
+#edges_weight -> number variable of the weight of the edge
+###
+
+
+
+
+## R Markdown
+
+```{r}
+#Load the igraph library
+library(igraph)
+```
+
+```{r}
+#Read the file
+my_movie <- read.csv(file.choose(), header=TRUE, row.names=1)
+my_matrix <- as.matrix(my_movie)
+```
+
+```{r}
+#Arranging the data to a matrix
+my_network2 <- graph.adjacency(my_matrix, mode="undirected", diag=FALSE)
+my_network2
+```
+```{r}
+#Network plot
+w = simplify(my_network2)
+E(w)$weight = sapply(E(w),
+function(e) {length(all_shortest_paths(my_network2, from=ends(w, e)[1], to=ends(w, e)[2])$res) } )
+```
+
+```{r}
+#Weighted plot without multiple single connections
+plot(w, vertex.size = 10, vertex.color = "yellow", 
+     edge.arrow.size = 0.15, edge.width=E(w)$weight,
+     layout = layout.kamada.kawai)
+```
+```{r}
+#Weighted plot with multiple single connections
+plot(my_network2, vertex.size = 10, vertex.color = "yellow", 
+     edge.arrow.size = 0.15,
+     layout = layout.kamada.kawai)
+```
+
+#General Network Analysis
+#The number of edges is equal to 80. This means that there are 80 total connections in this movie dataset.
+#The number of nodes is equals to 26. This means that there are 26 characters in the movie.
+```{r}
+#Number of edges
+gsize(my_network2)
+
+#Number of Nodes
+gorder(my_network2)
+```
+
+#The result shows that there are in total 181 cliques in this network diagram.
+#The largest set of cliques is up to 6 nodes and the output shows that there are 16 of them.
+
+```{r}
+#CLIQUES
+#Number of cliques
+cliques(my_network2)
+
+#Largest set of cliques
+clique_num(my_network2)
+
+#Number of cliques with 6 nodes
+count_max_cliques(my_network2)
+
+#plot of largest cliques
+a <- largest.cliques(my_network2)
+clique1 <- a[[1]]
+g2 <- induced.subgraph(graph=my_network2, vids=clique1)
+plot(g2)
+```
+#The node that we would be analysing is Timothy Price (Price).
+
+
+```{r}
+#Node Analysis (Price)
+p_node <- induced_subgraph(my_network2, ego(my_network2, 1, "PRICE")[[1]]) #neighbouring nodes of Price
+plot(p_node)
+```
+
+```{r}
+#Weighted Plot for Node "Price"
+p_node_2 = simplify(p_node)
+E(p_node_2)$weight = sapply(E(g2), function(e){length(all_shortest_paths(p_node, from=ends(p_node_2, e)[1], to=ends(p_node_2, e)[2])$res)})
+plot(p_node_2, 
+     vertix.size=15,
+     vertex.label.dist=0.5,
+     vertex.label.cex=0.8,
+     vertex.label.degree=-pi/2,
+     edge.width=E(p_node_2)$weight,
+     layout=layout_with_kk,
+     margin=-0.2)
+```
+
+#Based on the generated output, it is seen that Price has a degree of 18 which includes himself.
+
+```{r}
+#number of edges for Price
+gsize(p_node) 
+
+#1. degree centrality = 14 
+degree(p_node)
+```
+#Bateman is seen to have a high weightage for the connection to Price at 18 edges in total.
+
+```{r}
+#2. edges from price to Bateman = 18
+edge_connectivity(p_node, source="BATEMAN", target="PRICE", checks=TRUE) 
+```
+#Price shows a high betweenness Centrality among other characters at 14.94 making him the character that has the second highest amount of betweenness centrality. It proves that Price’s role greatly impacted the storyline in which messages are passed through him judging by his great value in betweenness among all the characters. 
+
+
+```{r}
+#3. betweenness centrality
+betweenness(my_network2)
+V(p_node)$betweenness <- betweenness(p_node, directed=F)
+plot(p_node,
+     vertex.label.cex = .6,
+     vertex.label.color="black", 
+     vertex.size = V(p_node)$betweenness)
+```
+
+#With closeness centrality, what we are measuring is the average closeness(distance) between a node to the others. In this case for Price, we saw a value of 0.027. This is explained by the average distance between Price and other nodes(characters) is 0.027. We can say that Price has a good wide connection with other characters as he has a high closeness value which is one place smaller than the protagonist Bateman. 
+
+```{r}
+#4. closeness centrality
+closeness(my_network2)
+```
+
+#Degree centrality only takes into account into of the number of edges in each node, leaving out ego’s alter. With eigenvector centrality, it takes into account ego’s alter and we will be able to figure out which characters has powerful influence in the movie. Price has an eigenvector centrality value of 0.64 which is again the second highest losing to Bateman at 1.00. This shows that Price is still a powerful character in the given movie.
+
+```{r}
+#5. eigenvector centrality
+evcent(my_network2)$vector
+V(my_network2)$eigenvector <- evcent(my_network2)$vector
+plot(my_network2,
+     vertex.label.cex = .6, 
+     vertex.label.color = "black", 
+     vertex.size = V(my_network2)$eigenvector/max(V(my_network2)$eigenvector) * 20)
+```
+#The triangles value for Price is 27. 
+
+```{r}
+#6. triangle value
+atri <- count_triangles(my_network2)
+plot(my_network2, vertex.label=atri)
+```
+
+#Eccentricity value for Price is 2. This means that the node(character) is in proximity to Price in which the furthest node away from Price is 2 vertices away. It is not considered far as the highest value we can see from the output is 3. The could be interpreted as Price do not have the widest connection to all the characters out there. 
+
+```{r}
+#7. eccentricity
+eccentricity(my_network2)
+```
+
+#Price also has a Pagerank value of 0.098 which is one level lower as compared to Bateman’s 0.25. This is interpreted as the “ranking” of characters to identify which character has greater influential impact and we can say that Price is ranked second. 
+
+
+```{r}
+#8. pagerank
+page_rank(my_network2)
+```
+
+#FINDINGS
+
+#Based on the findings of the dataset "American Psycho", we have a clear idea of the overal network and its connectivity between all the various nodes. 
+#We can infer that Bateman is the source of power in the organization. This is because Bateman has the highest level of connectivity.
+#Bateman relates to the various nodes that we have.
+
+
